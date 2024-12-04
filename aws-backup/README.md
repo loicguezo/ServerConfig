@@ -76,6 +76,18 @@ You can automate the backup process by adding the script to crontab:
     ```bash
     0 12 * * * /path/to/aws-bak.sh
     ```
+4. **Cleanup and Purge**:
+If you need to remove all installed files or clean up AWS-related configurations, the script provides two options:
+- Clean Up AWS: To remove AWS configurations and related artifacts (e.g., credentials, CLI configuration), use the following command:
+    
+    ```bash
+    ./aws-bak.sh clean aws
+    ```
+- Purge the Program: This option deletes all program-related files (e.g., script, logs, backup files), but it does not clean up AWS configurations:
+    
+    ```bash
+    ./aws-bak.sh clean
+    ```
 
 ## How It Works
 
