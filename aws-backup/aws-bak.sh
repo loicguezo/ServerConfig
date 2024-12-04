@@ -3,19 +3,21 @@
 # change to your aws-server name
 AWS="<AWS-server Name>"
 
-BACKUP="$(cd "$(dirname "$0")" && pwd)/backup_file.bak"
-LOG="/var/log/save-aws.log"
+BACKUP="$(cd "$(dirname "$0")" && pwd)/aws-bakup.bak"
+LOG="/var/log/aws-bak.log"
+
+SYNCED_FILES=""
 
 date_print() {
-    echo -n "$(date +"%Y-%m-%d %H:%M:%S") - " | tee -a $LOG
+    echo -n "$(date +"%d-%m-%Y %H:%M:%S") - " | tee -a $LOG
 }
 
 error_print() {
     date_print
-    if [ "$1" ]; then
-        echo -n "Backup error $2 -/> s3://$AWS : " | tee -a "$LOG"
+    if [ "$1" == "true" ]; then
+        echo "Backup error $2 -/> s3://$AWS : " | tee -a "$LOG"
     else
-        echo -n "Backup succeeded --> s3://$AWS : " | tee -a "$LOG"
+        echo "Backup succeeded --> s3://$AWS : " | tee -a "$LOG"
     fi
 }
 
@@ -31,6 +33,10 @@ if [ ! -e "$BACKUP" ]; then
 fi
 
 while IFS= read -r SOURCE_PATH || [ -n "$SOURCE_PATH" ]; do
+    if [ -z "$SOURCE_PATH" ] || [[ "$SOURCE_PATH" =~ ^[[:space:]]*$ ]]; then
+        continue
+    fi
+
     if [ -d "$SOURCE_PATH" ] || [ -f "$SOURCE_PATH" ]; then
         aws s3 sync "$SOURCE_PATH" "s3://$AWS/$(basename "$SOURCE_PATH")" --delete
 
@@ -39,11 +45,20 @@ while IFS= read -r SOURCE_PATH || [ -n "$SOURCE_PATH" ]; do
             echo "Error while syncing $SOURCE_PATH to the AWS server." | tee -a "$LOG"
             exit 1
         fi
+
+        SYNCED_FILES="$SYNCED_FILES\n$SOURCE_PATH"
     else
         error_print true "$SOURCE_PATH"
         echo "$SOURCE_PATH not found or inaccessible." | tee -a "$LOG"
     fi
 done < "$BACKUP"
 
-error_print false ""
+if [ -n "$SYNCED_FILES" ]; then
+    error_print false ""
+    echo -e "Files synced:$SYNCED_FILES" | tee -a "$LOG"
+else
+    echo "No files synced." | tee -a "$LOG"
+    exit 0;
+fi
+
 echo "All files synced to AWS." | tee -a "$LOG"
