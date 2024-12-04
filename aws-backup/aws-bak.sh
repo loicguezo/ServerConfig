@@ -3,7 +3,8 @@
 # change to your aws-server name
 AWS="<AWS-server Name>"
 
-BACKUP="$(cd "$(dirname "$0")" && pwd)/aws-bakup.bak"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKUP="$DIR/aws-bakup.bak"
 LOG="/var/log/aws-bak.log"
 
 SYNCED_FILES=""
@@ -20,6 +21,25 @@ error_print() {
         echo "Backup succeeded --> s3://$AWS : " | tee -a "$LOG"
     fi
 }
+
+if [ "$1" == "clean" ]; then
+    if [ "$2" == "aws" ]; then
+        echo "Cleaning the S3 bucket: s3://$AWS" | tee -a "$LOG"
+        aws s3 rm "s3://$AWS/" --recursive | tee -a "$LOG"
+
+        if [ $? -ne 0 ]; then
+            error_print true "Failed to clean the S3 bucket"
+            exit 1
+        fi
+
+        echo "Bucket cleaned successfully." | tee -a "$LOG"
+        exit 0
+    else
+        echo "Purge aws-bak files."
+        rm -f $BACKUP $LOG $DIR/aws-bak.sh
+        exit 0
+    fi
+fi
 
 if [ -n "$1" ]; then
     AWS="$1"
@@ -38,7 +58,7 @@ while IFS= read -r SOURCE_PATH || [ -n "$SOURCE_PATH" ]; do
     fi
 
     if [ -d "$SOURCE_PATH" ] || [ -f "$SOURCE_PATH" ]; then
-        aws s3 sync "$SOURCE_PATH" "s3://$AWS/$(basename "$SOURCE_PATH")" --delete
+        aws s3 sync "$SOURCE_PATH" "s3://$AWS/$(basename "$SOURCE_PATH")" --delete > /dev/null 2>&1
 
         if [ $? -ne 0 ]; then
             error_print true "$SOURCE_PATH"
