@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# change to your aws-server name
-AWS="<AWS-server Name>"
+source /etc/serverconfig/.env
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP="$DIR/aws-bakup.bak"
